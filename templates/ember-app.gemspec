@@ -1,0 +1,15 @@
+# coding: utf-8
+Gem::Specification.new do |spec|
+  spec.name          = "{{ pkg.name }}"
+  spec.version       = "{{ pkg.version }}"
+  spec.authors       = ["{{ pkg.author }}"]
+  spec.email         = ["support@gemfury.com"]
+  spec.summary       = %q{Ember app "{{ pkg.name }}"}
+  spec.description   = %q{Ember application "{{ pkg.name }}"}
+  spec.homepage      = "{{ pkg.homepage }}"
+  spec.license       = "{{ pkg.license }}"
+
+  spec.files         = Dir["{assets,lib}/**/*"]
+  spec.require_paths = ["lib"]
+  spec.add_dependency "railties", "~> 4.0"
+end

@@ -1,0 +1,36 @@
+{
+  "name": "ember-rails",
+  "version": "1.0.0",
+  "license": "MIT",
+  "description": "Package Ember app for Rails Asset Pipeline",
+  "homepage": "https://github.com/rykov/ember-rails#readme",
+  "author": "Michael Rykov",
+
+  "main": "lib/rails-assets.js",
+  "ember-addon": {
+    "main": "lib/ember-addon.js"
+  },
+
+  "scripts": {},
+  "keywords": [
+    "ember-addon",
+    "ember-cli",
+    "rails"
+  ],
+
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rykov/ember-rails.git"
+  },
+  "bugs": {
+    "url": "https://github.com/rykov/ember-rails/issues"
+  },
+
+  "dependencies": {
+    "mustache": "~2.1.3",
+    "broccoli-writer": "~0.1.1",
+    "broccoli-kitchen-sink-helpers": "~0.2.2",
+    "broccoli-merge-trees": "~0.1.4",
+    "broccoli-funnel": "~0.2.3"
+  }
+}
