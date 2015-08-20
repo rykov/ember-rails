@@ -1,6 +1,6 @@
 # coding: utf-8
 Gem::Specification.new do |spec|
-  spec.name          = "{{ pkg.name }}"
+  spec.name          = "{{ pkgId }}"
   spec.version       = "{{ pkg.version }}"
   spec.authors       = ["{{ pkg.author }}"]
   spec.email         = ["support@gemfury.com"]
