@@ -1,6 +1,6 @@
 {
   "name": "ember-rails",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "license": "MIT",
   "description": "Package Ember app for Rails Asset Pipeline",
   "homepage": "https://github.com/rykov/ember-rails#readme",
@@ -8,7 +8,8 @@
 
   "main": "lib/rails-assets.js",
   "ember-addon": {
-    "main": "lib/ember-addon.js"
+    "main": "lib/ember-addon.js",
+    "demoURL": "https://badge.fury.io"
   },
 
   "scripts": {},
