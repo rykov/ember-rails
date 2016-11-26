@@ -26,7 +26,7 @@ Once `ember-rails` is a dependency, just run your build as usual:
   ember build --environment=production
 ```
 
-The RubyGem will be build into the `dist` directory with the name `ember-rails-<app name>`
+The RubyGem will be built into the `dist` directory with the name `ember-rails-<app name>`
 matching the name and version you have specified in `package.json`
 
 You can then distribute this package [privately](https://gemfury.com) or
