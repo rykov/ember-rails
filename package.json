@@ -1,6 +1,6 @@
 {
   "name": "ember-rails",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "license": "MIT",
   "description": "Package Ember app for Rails Asset Pipeline",
   "homepage": "https://github.com/rykov/ember-rails#readme",
