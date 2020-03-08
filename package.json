@@ -1,9 +1,9 @@
 {
-  "name": "ember-rails",
+  "name": "ember-cli-rails",
   "version": "1.2.0",
   "license": "MIT",
   "description": "Package Ember app for Rails Asset Pipeline",
-  "homepage": "https://github.com/rykov/ember-rails#readme",
+  "homepage": "https://github.com/rykov/ember-cli-rails#readme",
   "author": "Michael Rykov",
 
   "main": "lib/rails-assets.js",
@@ -21,10 +21,10 @@
 
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/rykov/ember-rails.git"
+    "url": "git+https://github.com/rykov/ember-cli-rails.git"
   },
   "bugs": {
-    "url": "https://github.com/rykov/ember-rails/issues"
+    "url": "https://github.com/rykov/ember-cli-rails/issues"
   },
 
   "dependencies": {

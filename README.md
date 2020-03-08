@@ -1,6 +1,6 @@
 # Rails Asset Wrapper for Ember CLI apps
 
-[![npm version](https://badge.fury.io/js/ember-rails.svg)](https://badge.fury.io/js/ember-rails)
+[![npm version](https://badge.fury.io/js/ember-cli-rails.svg)](https://badge.fury.io/js/ember-cli-rails)
 
 This is an Ember addon to build a Rails Asset wrapper for your Ember application which can then
 be included as a RubyGem **without other dependencies** in your Rails application.
@@ -11,16 +11,16 @@ This package was used to deploy the landing page on [Version Badge](https://badg
 
 ## Getting started
 
-If you are using Ember CLI, simply install `ember-rails` as a dev dependency of your
+If you are using Ember CLI, simply install `ember-cli-rails` as a dev dependency of your
 application's `package.json`:
 
 ```bash
-  npm install ember-rails --save-dev
+  npm install ember-cli-rails --save-dev
 ```
 
 ## Usage
 
-Once `ember-rails` is a dependency, just run your build as usual:
+Once `ember-cli-rails` is a dependency, just run your build as usual:
 
 ```bash
   ember build --environment=production
