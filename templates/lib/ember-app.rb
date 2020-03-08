@@ -20,6 +20,11 @@ module {{ pkgClass }}
         Rails.application.middleware.insert_after(::ActionDispatch::Static, Middleware, assets.to_s)
       end
     end
+
+    # Tasks to copy assets from this gem to "public" folder
+    rake_tasks do
+      load __FILE__.sub(/\.rb$/, '.rake')
+    end
   end
 
   # Adding helper to reference paths
