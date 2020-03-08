@@ -10,6 +10,8 @@ Gem::Specification.new do |spec|
   spec.license       = "{{ pkg.license }}"
 
   spec.files         = Dir["{assets,lib}/**/*"]
+  spec.files         << "assetMap.json"
+
   spec.require_paths = ["lib"]
   spec.add_dependency "railties", ">= 4.0"
 end
