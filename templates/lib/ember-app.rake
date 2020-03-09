@@ -1,7 +1,7 @@
 require 'fileutils'
 
-app_path = '{{ pkgClass }}'.underscore
 task_name = "prepare_{{ pkgClass }}"
+app_path = '{{ pkgPath }}'
 
 namespace :assets do
   task :"#{task_name}" do
@@ -9,6 +9,7 @@ namespace :assets do
     dst = File.join(config.paths['public'].first, app_path)
     src = File.expand_path("../../assets", __FILE__)
     FileUtils.rm_r(dst) if File.exist?(dst)
+    FileUtils.mkdir_p(dst)
     FileUtils.cp_r(src, dst)
   end
 end

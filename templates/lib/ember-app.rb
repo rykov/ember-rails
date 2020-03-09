@@ -2,7 +2,7 @@ require 'active_support/inflector'
 require 'json'
 
 module {{ pkgClass }}
-  AppPath = '{{ pkgClass }}'.underscore
+  AppPath = '{{ pkgPath }}'
   AssetsPath = 'assets'
 
   class Engine < ::Rails::Engine
@@ -40,20 +40,21 @@ module {{ pkgClass }}
       define_method("#{name}_path") do |path|
         out = assets["#{AssetsPath}/#{path}"]
         raise("Path not found: #{path}") if !out
-        out.sub(/^#{AssetsPath}/, "/#{AppPath}")
+        asset_path("/#{AppPath}/#{out}")
       end
     end
   end
 
   # Same as Static, but we strip "/<app>" prefix from path
   class Middleware < ::ActionDispatch::Static
+    PathPrefix = "/#{AppPath}/#{AssetsPath}"
+
     def call(env)
-      prefix = "/#{AppPath}"
       req = Rack::Request.new env
       path = req.path_info
 
-      if (req.get? || req.head?) && path.starts_with?(prefix)
-        path = path.chomp("/").sub(/^#{prefix}/, '')
+      if (req.get? || req.head?) && path.starts_with?(PathPrefix)
+        path = path.chomp("/").sub(/^#{PathPrefix}/, '')
         if match = @file_handler.match?(path)
           req.path_info = match
           return @file_handler.serve(req)
