@@ -3,7 +3,7 @@ require 'json'
 
 module {{ pkgClass }}
   AppPath = '{{ pkgPath }}'
-  AssetsPath = 'assets'
+  PublicPath = 'public'
 
   class Engine < ::Rails::Engine
     initializer :assets do
@@ -13,7 +13,7 @@ module {{ pkgClass }}
 
       # Add Ember application root to asset paths
       config = ::Rails.application.config
-      assets = root.join(AssetsPath)
+      assets = root.join(PublicPath)
 
       # Serve directly when asset pipeline is enabled
       if config.public_file_server.enabled && config.assets.compile
@@ -30,24 +30,26 @@ module {{ pkgClass }}
   # Adding helper to reference paths
   class Helper < Module
     def initialize(name, root)
-      manifest = IO.read(root.join('assetMap.json'))
-      @assets = JSON.parse(manifest)['assets']
+      manifest = JSON.parse(IO.read(root.join('assetMap.json')))
+      @assets = manifest['assets']
+      @prefix = "/#{AppPath}/"
       @name = name
     end
 
     def included(klass)
-      name, assets = @name.underscore, @assets
+      name = @name.underscore
+      assets, prefix = @assets, @prefix
+
       define_method("#{name}_path") do |path|
-        out = assets["#{AssetsPath}/#{path}"]
-        raise("Path not found: #{path}") if !out
-        asset_path("/#{AppPath}/#{out}")
+        out = assets[path] || raise("Path not found: #{path}")
+        asset_path("#{prefix}#{out}")
       end
     end
   end
 
   # Same as Static, but we strip "/<app>" prefix from path
   class Middleware < ::ActionDispatch::Static
-    PathPrefix = "/#{AppPath}/#{AssetsPath}"
+    PathPrefix = "/#{AppPath}"
 
     def call(env)
       req = Rack::Request.new env

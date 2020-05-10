@@ -9,7 +9,7 @@ Gem::Specification.new do |spec|
   spec.homepage      = "{{ pkg.homepage }}"
   spec.license       = "{{ pkg.license }}"
 
-  spec.files         = Dir["{assets,lib}/**/*"]
+  spec.files         = Dir["{public,lib}/**/*"]
   spec.files         << "assetMap.json"
 
   spec.require_paths = ["lib"]

@@ -7,9 +7,8 @@ namespace :assets do
   task :"#{task_name}" do
     config = ::Rails.application.config
     dst = File.join(config.paths['public'].first, app_path)
-    src = File.expand_path("../../assets", __FILE__)
+    src = File.expand_path("../../public", __FILE__)
     FileUtils.rm_r(dst) if File.exist?(dst)
-    FileUtils.mkdir_p(dst)
     FileUtils.cp_r(src, dst)
   end
 end
