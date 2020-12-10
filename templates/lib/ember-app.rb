@@ -48,22 +48,24 @@ module {{ pkgClass }}
   end
 
   # Same as Static, but we strip "/<app>" prefix from path
-  class Middleware < ::ActionDispatch::Static
+  class Middleware
     PathPrefix = "/#{AppPath}"
 
+    def initialize(app, *args)
+      @static = ::ActionDispatch::Static.new(app, *args)
+      @app = app
+    end
+
     def call(env)
-      req = Rack::Request.new env
-      path = req.path_info
+      path = env[Rack::PATH_INFO] || '/'
+      verb = env[Rack::REQUEST_METHOD]
 
-      if (req.get? || req.head?) && path.starts_with?(PathPrefix)
+      if (verb == "GET" || verb == "HEAD") && path.starts_with?(PathPrefix)
         path = path.chomp("/").sub(/^#{PathPrefix}/, '')
-        if match = @file_handler.match?(path)
-          req.path_info = match
-          return @file_handler.serve(req)
-        end
+        @static.call(env.merge(Rack::PATH_INFO => path))
+      else
+        @app.call(env)
       end
-
-      @app.call(req.env)
     end
   end
 end
