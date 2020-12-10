@@ -6,7 +6,7 @@ module {{ pkgClass }}
   PublicPath = 'public'
 
   class Engine < ::Rails::Engine
-    initializer :assets do
+    initializer "{{ pkgClass }}.assets", after: :assets do
       # Add helpers for javascript/stylesheets
       helper = Helper.new("{{ pkgClass }}", root)
       ActiveSupport.on_load( :action_view ) { include(helper) }
