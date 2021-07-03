@@ -5,20 +5,20 @@
   "description": "Package Ember app for Rails Asset Pipeline",
   "homepage": "https://github.com/rykov/ember-cli-rails#readme",
   "author": "Michael Rykov",
-
   "main": "lib/rails-assets.js",
   "ember-addon": {
     "main": "lib/ember-addon.js",
     "demoURL": "https://badge.fury.io"
   },
-
-  "scripts": {},
+  "scripts": {
+    "lint": "eslint . --cache",
+    "lint:fix": "eslint . --fix"
+  },
   "keywords": [
     "ember-addon",
     "ember-cli",
     "rails"
   ],
-
   "repository": {
     "type": "git",
     "url": "git+https://github.com/rykov/ember-cli-rails.git"
@@ -26,7 +26,6 @@
   "bugs": {
     "url": "https://github.com/rykov/ember-cli-rails/issues"
   },
-
   "dependencies": {
     "broccoli-kitchen-sink-helpers": "^0.3.1",
     "broccoli-merge-trees": "^3.0.2",
@@ -36,8 +35,8 @@
     "fs-extra": "^8.1.0",
     "handlebars": "^4.7.6"
   },
-
   "devDependencies": {
-    "broccoli-asset-rev": "^3.0.0"
+    "broccoli-asset-rev": "^3.0.0",
+    "eslint": "^7.30.0"
   }
 }
