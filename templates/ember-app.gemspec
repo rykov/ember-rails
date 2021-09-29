@@ -10,6 +10,7 @@ Gem::Specification.new do |spec|
   spec.license       = "{{ pkg.license }}"
 
   spec.files         = Dir["{public,lib}/**/*"]
+  spec.files         << "assetManifest.json"
   spec.files         << "assetMap.json"
 
   spec.require_paths = ["lib"]

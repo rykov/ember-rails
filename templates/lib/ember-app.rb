@@ -30,8 +30,9 @@ module {{ pkgClass }}
   # Adding helper to reference paths
   class Helper < Module
     def initialize(name, root)
-      manifest = JSON.parse(IO.read(root.join('assetMap.json')))
-      @assets = manifest['assets']
+      manifest1 = load_json(root, 'assetMap.json', 'assets')
+      manifest2 = load_json(root, 'assetManifest.json')
+      @assets = manifest1.merge(manifest2)
       @prefix = "/#{AppPath}/"
       @name = name
     end
@@ -44,6 +45,15 @@ module {{ pkgClass }}
         out = assets[path] || raise("Path not found: #{path}")
         asset_path("#{prefix}#{out}")
       end
+    end
+
+  private
+
+    def load_json(root, filePath, jsonPath = nil)
+      hash = JSON.parse(IO.read(root.join(filePath)))
+      (jsonPath ? hash[jsonPath] : hash) || {}
+    rescue Errno::ENOENT
+      {}
     end
   end
 
