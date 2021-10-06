@@ -32,18 +32,38 @@ module {{ pkgClass }}
     def initialize(name, root)
       manifest1 = load_json(root, 'assetMap.json', 'assets')
       manifest2 = load_json(root, 'assetManifest.json')
-      @assets = manifest1.merge(manifest2)
+      @entrypoints = manifest2['entrypoints']['app']
+      @assets = manifest1.merge(manifest2['assets'])
       @prefix = "/#{AppPath}/"
       @name = name
     end
 
     def included(klass)
       name = @name.underscore
+      entrypoints = @entrypoints
       assets, prefix = @assets, @prefix
+      std_paths = %w(vendor {{ pkgName }})
 
       define_method("#{name}_path") do |path|
         out = assets[path] || raise("Path not found: #{path}")
         asset_path("#{prefix}#{out}")
+      end
+
+      define_method("stylesheet_link_#{name}") do
+        safe_join(std_paths.map { |path|
+          path = send("#{name}_path", "assets/#{path}.css")
+          stylesheet_link_tag(path)
+        }, "\n")
+      end
+
+      define_method("javascript_include_#{name}") do
+        safe_join(std_paths.map { |path|
+          send("#{name}_path", "assets/#{path}.js")
+        }.insert(1, *(entrypoints.map { |path|
+          "#{prefix}assets/#{path}"
+        })).map { |path|
+          javascript_include_tag(path)
+        }, "\n")
       end
     end
 
