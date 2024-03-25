@@ -9,6 +9,7 @@ namespace :assets do
     dst = File.join(config.paths['public'].first, app_path)
     src = File.expand_path("../../public", __FILE__)
     FileUtils.rm_r(dst) if File.exist?(dst)
+    FileUtils.mkdir_p(File.dirname(dst))
     FileUtils.cp_r(src, dst)
   end
 end

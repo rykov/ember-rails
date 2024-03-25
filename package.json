@@ -1,6 +1,6 @@
 {
   "name": "ember-cli-rails",
-  "version": "1.2.0-rc.2",
+  "version": "1.2.0-rc.3",
   "license": "MIT",
   "description": "Package Ember app for Rails Asset Pipeline",
   "homepage": "https://github.com/rykov/ember-cli-rails#readme",
