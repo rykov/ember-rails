@@ -11,6 +11,12 @@ module {{ pkgClass }}
       helper = Helper.new("{{ pkgClass }}", root)
       ActiveSupport.on_load( :action_view ) { include(helper) }
 
+      # Add helper methods to application's controller
+      controller_ext = ControllerExt.new("{{ pkgClass }}")
+      ActiveSupport.on_load(:action_controller_base) {
+        prepend(controller_ext)
+      }
+
       # Add Ember application root to asset paths
       config = ::Rails.application.config
       assets = root.join(PublicPath)
@@ -24,6 +30,21 @@ module {{ pkgClass }}
     # Tasks to copy assets from this gem to "public" folder
     rake_tasks do
       load __FILE__.sub(/\.rb$/, '.rake')
+    end
+  end
+
+  # Adding helper to load app
+  class ControllerExt < Module
+    def initialize(name)
+      @name = name
+    end
+
+    def prepended(klass)
+      name = @name.underscore
+
+      define_method("render_#{name}") do
+        render layout: "#{name}/boot", inline: ''
+      end
     end
   end
 
