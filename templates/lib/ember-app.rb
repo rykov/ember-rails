@@ -1,5 +1,4 @@
 require 'active_support/inflector'
-require 'json'
 
 module {{ pkgClass }}
   AppPath = '{{ pkgPath }}'
@@ -7,10 +6,6 @@ module {{ pkgClass }}
 
   class Engine < ::Rails::Engine
     initializer "{{ pkgClass }}.assets", after: :assets do
-      # Add helpers for javascript/stylesheets
-      helper = Helper.new("{{ pkgClass }}", root)
-      ActiveSupport.on_load( :action_view ) { include(helper) }
-
       # Add helper methods to application's controller
       controller_ext = ControllerExt.new("{{ pkgClass }}")
       ActiveSupport.on_load(:action_controller_base) {
@@ -45,56 +40,6 @@ module {{ pkgClass }}
       define_method("render_#{name}") do
         render layout: "#{name}/boot", inline: ''
       end
-    end
-  end
-
-  # Adding helper to reference paths
-  class Helper < Module
-    def initialize(name, root)
-      manifest1 = load_json(root, 'assetMap.json', 'assets')
-      manifest2 = load_json(root, 'assetManifest.json')
-      @entrypoints = manifest2['entrypoints']['app']
-      @assets = manifest1.merge(manifest2['assets'])
-      @prefix = "/#{AppPath}/"
-      @name = name
-    end
-
-    def included(klass)
-      name = @name.underscore
-      entrypoints = @entrypoints
-      assets, prefix = @assets, @prefix
-      std_paths = %w(vendor {{ pkgName }})
-
-      define_method("#{name}_path") do |path|
-        out = assets[path] || raise("Path not found: #{path}")
-        asset_path("#{prefix}#{out}")
-      end
-
-      define_method("stylesheet_link_#{name}") do
-        safe_join(std_paths.map { |path|
-          path = send("#{name}_path", "assets/#{path}.css")
-          stylesheet_link_tag(path)
-        }, "\n")
-      end
-
-      define_method("javascript_include_#{name}") do
-        safe_join(std_paths.map { |path|
-          send("#{name}_path", "assets/#{path}.js")
-        }.insert(1, *(entrypoints.map { |path|
-          "#{prefix}assets/#{path}"
-        })).map { |path|
-          javascript_include_tag(path)
-        }, "\n")
-      end
-    end
-
-  private
-
-    def load_json(root, filePath, jsonPath = nil)
-      hash = JSON.parse(IO.read(root.join(filePath)))
-      (jsonPath ? hash[jsonPath] : hash) || {}
-    rescue Errno::ENOENT
-      {}
     end
   end
 
