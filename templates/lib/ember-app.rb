@@ -37,8 +37,11 @@ module {{ pkgClass }}
     def prepended(klass)
       name = @name.underscore
 
-      define_method("render_#{name}") do
-        render layout: "#{name}/boot", inline: ''
+      define_method("render_#{name}") do |*args, &block|
+        opts = args.extract_options!.dup
+        opts[:inline] = '' if args.empty? && opts.empty?
+        args.push(opts.merge(layout: "#{name}/boot"))
+        render(*args, &block)
       end
     end
   end
