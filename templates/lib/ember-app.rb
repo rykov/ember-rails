@@ -60,10 +60,13 @@ module {{ pkgClass }}
     end
 
     def included(klass)
-      name = @name.underscore
-      entrypoints = @entrypoints
-      assets, prefix = @assets, @prefix
       std_paths = %w(vendor {{ pkgName }})
+      assets, prefix = @assets, @prefix
+      name = @name.underscore
+
+      entry_map = @entrypoints.map { |p| "#{prefix}assets/#{p}" }
+      entry_map = entry_map.group_by { |p| File.extname(p) }
+      entry_map.default = [] # See below for usage
 
       define_method("#{name}_path") do |path|
         out = assets[path] || raise("Path not found: #{path}")
@@ -72,7 +75,8 @@ module {{ pkgClass }}
 
       define_method("stylesheet_link_#{name}") do
         safe_join(std_paths.map { |path|
-          path = send("#{name}_path", "assets/#{path}.css")
+          send("#{name}_path", "assets/#{path}.css")
+        }.insert(1, *entry_map['.css']).map { |path|
           stylesheet_link_tag(path)
         }, "\n")
       end
@@ -80,9 +84,7 @@ module {{ pkgClass }}
       define_method("javascript_include_#{name}") do
         safe_join(std_paths.map { |path|
           send("#{name}_path", "assets/#{path}.js")
-        }.insert(1, *(entrypoints.map { |path|
-          "#{prefix}assets/#{path}"
-        })).map { |path|
+        }.insert(1, *entry_map['.js']).map { |path|
           javascript_include_tag(path)
         }, "\n")
       end
