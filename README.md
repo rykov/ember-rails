@@ -26,24 +26,62 @@ Once `ember-cli-rails` is a dependency, just run your build as usual:
   ember build --environment=production
 ```
 
-The RubyGem will be built into the `dist` directory with the name `ember-rails-<app name>`
+The RubyGem will be built into the `dist-rails` directory with the name `ember-<app name>`
 matching the name and version you have specified in `package.json`
 
 You can then distribute this package [privately](https://gemfury.com) or
 [publicly](https://rubygems.org) and include it in your Rails app's Gemfile:
 
 ```ruby
-  gem 'ember-rails-app-name'
+  gem 'ember-app-name'
 ```
 
-The generated assets are now available to your Rails pages:
+### Rendering the Ember app
+
+The generated gem adds a `render_<app_name>` helper to your Rails controllers:
+
+```ruby
+  class EmberController < ActionController::Base
+    def index
+      render_ember_app_name
+    end
+  end
+```
+
+This renders the Ember app's boot HTML, which includes all necessary script and
+stylesheet tags.
+
+The helper accepts the same arguments as Rails `render`, so, for example, you can
+customize the boot HTML by passing a template that uses `content_for` to inject
+content into the layout's `yield` blocks:
+
+```ruby
+  render_ember_app_name 'customizations'
+```
 
 ```erb
-  <%= stylesheet_link_tag 'ember-rails-app-name/vendor' %>
-  <%= stylesheet_link_tag 'ember-rails-app-name/application' %>
-  ...
-  <%= javascript_include_tag 'ember-rails-app-name/vendor' %>
-  <%= javascript_include_tag 'ember-rails-app-name/application' %>
+  <%# app/views/ember/customizations.html.erb %>
+  <% content_for :head do %>
+    <meta name="custom-config" content="value">
+  <% end %>
+
+  <p>Loading...</p>
+```
+
+The template's `content_for` blocks are yielded into the corresponding
+placeholders in the boot layout (e.g. `:head`, `:body-footer`), and the
+template body itself is rendered into the main `<%= yield %>` block.
+
+### Serving assets directly
+
+The generated gem includes Rack middleware that serves your Ember app's assets
+under the app path prefix. In development, you can also serve assets directly
+by enabling the public file server and asset compilation:
+
+```ruby
+  # config/environments/development.rb
+  config.public_file_server.enabled = true
+  config.assets.compile = true
 ```
 
 ## Contribution and Improvements
