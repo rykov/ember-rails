@@ -1,6 +1,6 @@
 {
   "name": "ember-cli-rails",
-  "version": "2.0.0",
+  "version": "2.0.1-rc.4",
   "license": "MIT",
   "description": "Package Ember app for Rails Asset Pipeline",
   "homepage": "https://github.com/rykov/ember-cli-rails#readme",
@@ -48,5 +48,13 @@
     "@eslint/js": "^10.0.1",
     "broccoli-asset-rev": "^3.0.0",
     "eslint": "^10.2.0"
+  },
+  "peerDependencies": {
+    "@embroider/compat": ">=3.0.0",
+    "@embroider/webpack": ">=4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@embroider/compat": { "optional": true },
+    "@embroider/webpack": { "optional": true }
   }
 }

@@ -35,36 +35,6 @@ describe('contentFor', () => {
   });
 });
 
-// --- config ---
-
-describe('config', () => {
-  const callConfig = (rootURL) => {
-    const ctx = {};
-    addon.config.call(ctx, 'development', rootURL !== undefined ? { rootURL } : {});
-    return ctx._appRootURL;
-  };
-
-  it('sets _appRootURL from rootURL', () => {
-    assert.equal(callConfig('/admin/'), '/admin');
-  });
-
-  it('sets _appRootURL to empty when rootURL is /', () => {
-    assert.equal(callConfig('/'), '');
-  });
-
-  it('sets _appRootURL to empty when rootURL is absent', () => {
-    assert.equal(callConfig(undefined), '');
-  });
-
-  it('normalizes backslashes in rootURL', () => {
-    assert.equal(callConfig('\\admin\\'), '/admin');
-  });
-
-  it('preserves rootURL without trailing slash', () => {
-    assert.equal(callConfig('/admin'), '/admin');
-  });
-});
-
 // --- _initializeOptions ---
 
 describe('_initializeOptions', () => {
@@ -81,13 +51,25 @@ describe('_initializeOptions', () => {
     mocks = [];
   });
 
-  const makeContext = (env, appRootURL) => ({
-    _appRootURL: appRootURL || '',
+  const makeContext = (env) => ({
     app: { env: env || 'development' },
   });
 
   const makeAppOptions = (overrides) =>
-    Object.assign({ project: { pkg: { name: 'my-app' } } }, overrides);
+    Object.assign({
+      project: {
+        pkg: { name: 'my-app' },
+        config() { return {}; },
+      },
+    }, overrides);
+
+  const makeAppOptionsWithRootURL = (rootURL, overrides) =>
+    makeAppOptions(Object.assign({
+      project: {
+        pkg: { name: 'my-app' },
+        config() { return { rootURL }; },
+      },
+    }, overrides));
 
   it('applies default options when emberRails is absent', () => {
     const ctx = makeContext('development');
@@ -153,8 +135,8 @@ describe('_initializeOptions', () => {
   });
 
   it('computes autoImport.publicAssetURL', () => {
-    const ctx = makeContext('development', '/admin');
-    const appOpts = makeAppOptions({ fingerprint: { enabled: true } });
+    const ctx = makeContext('development');
+    const appOpts = makeAppOptionsWithRootURL('/admin', { fingerprint: { enabled: true } });
     addon._initializeOptions.call(ctx, appOpts);
 
     assert.equal(appOpts.autoImport.publicAssetURL, '/ember_my_app/admin/assets');
@@ -206,6 +188,47 @@ describe('_initializeOptions', () => {
 
     assert.ok(ctx.railsOptions, 'railsOptions stored');
     assert.equal(ctx.railsOptions.pkg.name, 'my-app');
+  });
+
+  // --- rootURL resolution (ember-cli 6.12+ hook ordering fix) ---
+
+  it('resolves _appRootURL from project.config() rootURL', () => {
+    const ctx = makeContext('development');
+    addon._initializeOptions.call(ctx, makeAppOptionsWithRootURL('/admin/', { fingerprint: { enabled: true } }));
+
+    assert.equal(ctx.railsOptions._appRootURL, '/admin');
+  });
+
+  it('sets _appRootURL to empty when rootURL is /', () => {
+    const ctx = makeContext('development');
+    addon._initializeOptions.call(ctx, makeAppOptionsWithRootURL('/', { fingerprint: { enabled: true } }));
+
+    assert.equal(ctx.railsOptions._appRootURL, '');
+  });
+
+  it('sets _appRootURL to empty when rootURL is absent', () => {
+    const ctx = makeContext('development');
+    addon._initializeOptions.call(ctx, makeAppOptions({ fingerprint: { enabled: true } }));
+
+    assert.equal(ctx.railsOptions._appRootURL, '');
+  });
+
+  it('works when _appRootURL is not pre-set on context (included before config)', () => {
+    const ctx = { app: { env: 'development' } };
+    addon._initializeOptions.call(ctx, makeAppOptionsWithRootURL('/admin/', { fingerprint: { enabled: true } }));
+
+    assert.equal(ctx.railsOptions._appRootURL, '/admin');
+  });
+
+  it('preserves user override of _appRootURL', () => {
+    const ctx = makeContext('development');
+    const appOpts = makeAppOptionsWithRootURL('/', {
+      emberRails: { _appRootURL: '/custom' },
+      fingerprint: { enabled: true },
+    });
+    addon._initializeOptions.call(ctx, appOpts);
+
+    assert.equal(ctx.railsOptions._appRootURL, '/custom');
   });
 });
 
@@ -400,8 +423,7 @@ describe('embroiderBuild', () => {
 
   const makeMockSelf = (overrides) => Object.assign({
     name: 'ember-cli-rails',
-    _appRootURL: '',
-    railsOptions: { enabled: false, pkg: { name: 'my-app' } },
+    railsOptions: { enabled: false, pkg: { name: 'my-app' }, _appRootURL: '' },
   }, overrides);
 
   it('throws when addon is not found in project addons', () => {
