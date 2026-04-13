@@ -59,7 +59,7 @@ module {{ pkgClass }}
       path = env[Rack::PATH_INFO] || '/'
       verb = env[Rack::REQUEST_METHOD]
 
-      if (verb == "GET" || verb == "HEAD") && path.starts_with?(PathPrefix)
+      if (verb == "GET" || verb == "HEAD") && path.start_with?(PathPrefix)
         path = path.chomp("/").sub(/^#{PathPrefix}/, '')
         @static.call(env.merge(Rack::PATH_INFO => path))
       else
