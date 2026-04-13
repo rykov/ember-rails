@@ -252,7 +252,7 @@ describe('postBuild', () => {
 
   const mockGemBuild = () => {
     mockFn(childProc, 'spawnSync', () => ({ status: 0 }));
-    mockFn(childProc, 'execSync', () => 'built');
+    mockFn(childProc, 'execFile', (_cmd, _args, _opts, cb) => cb(null, 'built'));
     mockFn(console, 'log', () => {});
   };
 
@@ -287,7 +287,7 @@ describe('postBuild', () => {
   };
 
   const runPostBuild = (result) => {
-    addon.postBuild.call({ railsOptions: { enabled: true } }, result);
+    return addon.postBuild.call({ railsOptions: { enabled: true } }, result);
   };
 
   it('skips everything when not enabled', () => {
@@ -299,40 +299,40 @@ describe('postBuild', () => {
     assert.ok(!fs.existsSync(path.join(tmpDir, 'dist-rails')), 'dist-rails not created');
   });
 
-  it('creates dist-rails directory', () => {
+  it('creates dist-rails directory', async () => {
     mockGemBuild();
-    runPostBuild(setupPostBuild());
+    await runPostBuild(setupPostBuild());
 
     assert.ok(fs.existsSync(path.join(tmpDir, 'dist-rails')), 'dist-rails created');
   });
 
-  it('copies build output to dist-rails/public', () => {
+  it('copies build output to dist-rails/public', async () => {
     mockGemBuild();
-    runPostBuild(setupPostBuild());
+    await runPostBuild(setupPostBuild());
 
     assert.ok(fs.existsSync(path.join(tmpDir, 'dist-rails/public/assets/app.js')), 'assets copied');
   });
 
-  it('removes index.html and robots.txt from public', () => {
+  it('removes index.html and robots.txt from public', async () => {
     mockGemBuild();
-    runPostBuild(setupPostBuild());
+    await runPostBuild(setupPostBuild());
 
     assert.ok(!fs.existsSync(path.join(tmpDir, 'dist-rails/public/index.html')), 'index.html removed');
     assert.ok(!fs.existsSync(path.join(tmpDir, 'dist-rails/public/robots.txt')), 'robots.txt removed');
   });
 
-  it('handles missing index.html and robots.txt gracefully', () => {
+  it('handles missing index.html and robots.txt gracefully', async () => {
     const result = setupPostBuild();
     fs.unlinkSync(path.join(result.directory, 'index.html'));
     fs.unlinkSync(path.join(result.directory, 'robots.txt'));
     mockGemBuild();
 
-    assert.doesNotThrow(() => runPostBuild(result));
+    await runPostBuild(result);
   });
 
-  it('moves app/, lib/, ember-app.gemspec out of public', () => {
+  it('moves app/, lib/, ember-app.gemspec out of public', async () => {
     mockGemBuild();
-    runPostBuild(setupPostBuild());
+    await runPostBuild(setupPostBuild());
 
     const distRails = path.join(tmpDir, 'dist-rails');
     assert.ok(fs.existsSync(path.join(distRails, 'app', 'boot.erb')), 'app/ moved to root');
@@ -350,16 +350,17 @@ describe('postBuild', () => {
     assert.throws(() => runPostBuild(setupPostBuild()), { message: 'RubyGems is not installed' });
   });
 
-  it('calls gem build with correct command and cwd', () => {
+  it('calls gem build with correct command and cwd', async () => {
     mockFn(childProc, 'spawnSync', () => ({ status: 0 }));
-    const execMock = mockFn(childProc, 'execSync', () => 'Successfully built');
+    const execMock = mockFn(childProc, 'execFile', (_cmd, _args, _opts, cb) => cb(null, 'Successfully built'));
     mockFn(console, 'log', () => {});
 
-    runPostBuild(setupPostBuild());
+    await runPostBuild(setupPostBuild());
 
     assert.equal(execMock.mock.calls.length, 1);
-    assert.equal(execMock.mock.calls[0].arguments[0], 'gem build ember-app.gemspec');
-    const execOpts = execMock.mock.calls[0].arguments[1];
+    assert.equal(execMock.mock.calls[0].arguments[0], 'gem');
+    assert.deepEqual(execMock.mock.calls[0].arguments[1], ['build', 'ember-app.gemspec']);
+    const execOpts = execMock.mock.calls[0].arguments[2];
     assert.equal(execOpts.cwd, path.resolve('./dist-rails'));
     assert.equal(execOpts.timeout, 20000);
     assert.equal(execOpts.encoding, 'utf-8');
@@ -447,5 +448,137 @@ describe('embroiderBuild', () => {
       assert.equal(result.processed, true);
       assert.deepEqual(result.from, { original: true });
     });
+  });
+});
+
+// --- postBuild symlink handling ---
+
+describe('postBuild symlink handling', () => {
+  let origCwd;
+  let tmpDir;
+  let mocks = [];
+
+  const mockFn = (obj, method, fn) => {
+    const m = mock.method(obj, method, fn);
+    mocks.push(m);
+    return m;
+  };
+
+  const mockGemBuild = () => {
+    mockFn(childProc, 'spawnSync', () => ({ status: 0 }));
+    mockFn(childProc, 'execFile', (_cmd, _args, _opts, cb) => cb(null, 'built'));
+    mockFn(console, 'log', () => {});
+  };
+
+  afterEach(() => {
+    mocks.forEach((m) => m.mock.restore());
+    mocks = [];
+    if (origCwd) process.chdir(origCwd);
+    if (tmpDir) fs.rmSync(tmpDir, { recursive: true, force: true });
+    origCwd = null;
+    tmpDir = null;
+  });
+
+  const setupWithSymlinks = () => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecr-symlink-'));
+    origCwd = process.cwd();
+    process.chdir(tmpDir);
+
+    // Create an external directory (simulating broccoli temp output)
+    const externalDir = path.join(tmpDir, 'broccoli-tmp');
+    fs.mkdirSync(externalDir);
+    fs.writeFileSync(path.join(externalDir, 'chunk.abc123.css'), 'body{}');
+    fs.mkdirSync(path.join(externalDir, 'images'));
+    fs.writeFileSync(path.join(externalDir, 'images', 'logo.png'), 'PNG');
+
+    // Create build output with symlinks
+    const resultDir = path.join(tmpDir, 'build-output');
+    fs.mkdirSync(resultDir);
+    fs.mkdirSync(path.join(resultDir, 'assets'));
+    fs.writeFileSync(path.join(resultDir, 'assets', 'app.js'), 'console.log("app")');
+    fs.writeFileSync(path.join(resultDir, 'index.html'), '<html></html>');
+    fs.writeFileSync(path.join(resultDir, 'robots.txt'), 'User-agent: *');
+    fs.writeFileSync(path.join(resultDir, 'ember-app.gemspec'), 'spec');
+    fs.mkdirSync(path.join(resultDir, 'app'));
+    fs.writeFileSync(path.join(resultDir, 'app', 'boot.erb'), 'layout');
+    fs.mkdirSync(path.join(resultDir, 'lib'));
+    fs.writeFileSync(path.join(resultDir, 'lib', 'my-app.rb'), 'ruby');
+    fs.writeFileSync(path.join(resultDir, 'lib', 'my-app.rake'), 'rake');
+
+    // Add symlinked file (like broccoli does)
+    fs.symlinkSync(
+      path.join(externalDir, 'chunk.abc123.css'),
+      path.join(resultDir, 'chunk.abc123.css'),
+    );
+
+    // Add symlinked directory
+    fs.symlinkSync(externalDir, path.join(resultDir, 'linked-assets'));
+
+    // Add relative symlink inside assets
+    fs.symlinkSync('../assets/app.js', path.join(resultDir, 'assets', 'app-link.js'));
+
+    return { directory: resultDir };
+  };
+
+  const runPostBuild = (result) => {
+    return addon.postBuild.call({ railsOptions: { enabled: true } }, result);
+  };
+
+  const walkTree = (dir) => {
+    const entries = [];
+    const walk = (d) => {
+      for (const entry of fs.readdirSync(d, { withFileTypes: true })) {
+        const full = path.join(d, entry.name);
+        entries.push(full);
+        // Use statSync to follow symlinks for directory check
+        if (fs.statSync(full).isDirectory()) walk(full);
+      }
+    };
+    walk(dir);
+    return entries;
+  };
+
+  it('dereferences symlinked files in build output', async () => {
+    mockGemBuild();
+    await runPostBuild(setupWithSymlinks());
+
+    const cssPath = path.join(tmpDir, 'dist-rails/public/chunk.abc123.css');
+    assert.ok(fs.existsSync(cssPath), 'symlinked file was copied');
+    assert.ok(!fs.lstatSync(cssPath).isSymbolicLink(), 'file is not a symlink');
+    assert.equal(fs.readFileSync(cssPath, 'utf-8'), 'body{}', 'content is correct');
+  });
+
+  it('dereferences symlinked directories in build output', async () => {
+    mockGemBuild();
+    await runPostBuild(setupWithSymlinks());
+
+    const dirPath = path.join(tmpDir, 'dist-rails/public/linked-assets');
+    assert.ok(fs.existsSync(dirPath), 'symlinked directory was copied');
+    assert.ok(!fs.lstatSync(dirPath).isSymbolicLink(), 'directory is not a symlink');
+    assert.ok(fs.statSync(dirPath).isDirectory(), 'is a real directory');
+
+    const filePath = path.join(dirPath, 'chunk.abc123.css');
+    assert.ok(fs.existsSync(filePath), 'file inside symlinked dir was copied');
+    assert.ok(!fs.lstatSync(filePath).isSymbolicLink(), 'file inside is not a symlink');
+  });
+
+  it('dereferences relative symlinks in build output', async () => {
+    mockGemBuild();
+    await runPostBuild(setupWithSymlinks());
+
+    const linkPath = path.join(tmpDir, 'dist-rails/public/assets/app-link.js');
+    assert.ok(fs.existsSync(linkPath), 'relative symlink target was copied');
+    assert.ok(!fs.lstatSync(linkPath).isSymbolicLink(), 'is not a symlink');
+    assert.equal(fs.readFileSync(linkPath, 'utf-8'), 'console.log("app")', 'content matches target');
+  });
+
+  it('dist-rails tree contains no symlinks', async () => {
+    mockGemBuild();
+    await runPostBuild(setupWithSymlinks());
+
+    const distRails = path.join(tmpDir, 'dist-rails');
+    const allEntries = walkTree(distRails);
+    const symlinks = allEntries.filter((e) => fs.lstatSync(e).isSymbolicLink());
+    assert.equal(symlinks.length, 0, `found symlinks: ${symlinks.map((s) => path.relative(distRails, s)).join(', ')}`);
   });
 });
