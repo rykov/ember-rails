@@ -45,7 +45,8 @@
     "normalize-path": "^3.0.0"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "broccoli-asset-rev": "^3.0.0",
-    "eslint": "^7.30.0"
+    "eslint": "^10.2.0"
   }
 }
