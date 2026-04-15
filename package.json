@@ -7,14 +7,20 @@
   "author": "Michael Rykov",
   "main": "lib/ember-addon.js",
   "exports": {
-    ".": "./lib/ember-addon.js",
-    "./vite-plugin": "./lib/vite-plugin.js"
+    ".": {
+      "default": "./lib/ember-addon.js"
+    },
+    "./vite-plugin": {
+      "default": "./lib/vite-plugin.js"
+    }
   },
   "files": [
     "lib/",
     "templates/"
   ],
   "ember-addon": {
+    "version": 2,
+    "type": "addon",
     "main": "lib/ember-addon.js",
     "demoURL": "https://badge.fury.io",
     "after": ["broccoli-asset-rev"]
@@ -41,7 +47,6 @@
   },
   "dependencies": {
     "broccoli-kitchen-sink-helpers": "^0.3.1",
-    "ember-cli-babel": "^7.0.0",
     "fs-extra": "^11.3.4",
     "silent-error": "^1.1.1",
     "handlebars": "^4.7.7",

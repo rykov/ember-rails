@@ -6,6 +6,37 @@ const os = require('node:os');
 const childProc = require('child_process');
 
 const addon = require('../lib/ember-addon');
+const pkg = require('../package.json');
+
+// --- v2 addon contract ---
+
+describe('v2 addon package.json', () => {
+  const requireExport = (key) => {
+    const entry = pkg.exports[key];
+    assert.ok(entry, `exports["${key}"] is defined`);
+    return require(path.resolve(__dirname, '..', entry.default || entry));
+  };
+
+  it('declares v2 addon format with required fields', () => {
+    assert.equal(pkg['ember-addon'].version, 2);
+    assert.equal(pkg['ember-addon'].type, 'addon');
+    assert.ok(pkg.keywords.includes('ember-addon'));
+    assert.ok(!Object.keys(pkg.dependencies || {}).includes('ember-cli-babel'));
+  });
+
+  it('ember-addon.main resolves to the addon module with hooks', () => {
+    const resolved = require(path.resolve(__dirname, '..', pkg['ember-addon'].main));
+    assert.equal(resolved.name, 'ember-cli-rails');
+    for (const hook of ['included', 'contentFor', 'postBuild']) {
+      assert.equal(typeof resolved[hook], 'function', `${hook} is a function`);
+    }
+  });
+
+  it('package exports resolve to correct modules', () => {
+    assert.equal(requireExport('.').name, 'ember-cli-rails');
+    assert.equal(typeof requireExport('./vite-plugin'), 'function');
+  });
+});
 
 // --- contentFor ---
 
@@ -42,14 +73,10 @@ describe('_initializeOptions', () => {
     ...overrides,
   });
 
-  const makeAppOptionsWithRootURL = (rootURL, overrides = {}) =>
-    makeAppOptions({
-      project: {
-        pkg: { name: 'my-app' },
-        config() { return { rootURL }; },
-      },
-      ...overrides,
-    });
+  const makeAppOptionsWithRootURL = (rootURL, overrides = {}) => ({
+    ...makeAppOptions(overrides),
+    project: { pkg: { name: 'my-app' }, config() { return { rootURL }; } },
+  });
 
   // Run _initializeOptions and return { ctx, appOpts } for assertions
   const initOpts = (appOpts, env) => {
@@ -205,9 +232,7 @@ describe('postBuild', () => {
   };
 
   it('skips everything when not enabled', () => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecr-postbuild-'));
-    origCwd = process.cwd();
-    process.chdir(tmpDir);
+    setupBuildDir();
     addon.postBuild.call({ railsOptions: { enabled: false } }, { directory: '/nonexistent' });
     assert.ok(!fs.existsSync(path.join(tmpDir, 'dist-rails')));
   });
@@ -264,89 +289,52 @@ describe('postBuild', () => {
     assert.equal(gemBuildCall.arguments[2].encoding, 'utf-8');
   });
 
-  // --- symlink handling ---
+  it('dereferences all symlinks in build output', () => {
+    const result = setupBuildDir();
 
-  describe('symlink handling', () => {
-    const setupWithSymlinks = () => {
-      const result = setupBuildDir();
+    // External directory simulating broccoli temp output
+    const externalDir = path.join(tmpDir, 'broccoli-tmp');
+    fs.mkdirSync(path.join(externalDir, 'images'), { recursive: true });
+    fs.writeFileSync(path.join(externalDir, 'chunk.abc123.css'), 'body{}');
+    fs.writeFileSync(path.join(externalDir, 'images', 'logo.png'), 'PNG');
 
-      // External directory simulating broccoli temp output
-      const externalDir = path.join(tmpDir, 'broccoli-tmp');
-      fs.mkdirSync(path.join(externalDir, 'images'), { recursive: true });
-      fs.writeFileSync(path.join(externalDir, 'chunk.abc123.css'), 'body{}');
-      fs.writeFileSync(path.join(externalDir, 'images', 'logo.png'), 'PNG');
+    // Symlinked file, directory, and relative symlink
+    fs.symlinkSync(
+      path.join(externalDir, 'chunk.abc123.css'),
+      path.join(result.directory, 'chunk.abc123.css'),
+    );
+    fs.symlinkSync(externalDir, path.join(result.directory, 'linked-assets'));
+    fs.symlinkSync('../assets/app.js', path.join(result.directory, 'assets', 'app-link.js'));
 
-      // Symlinked file, directory, and relative symlink
-      fs.symlinkSync(
-        path.join(externalDir, 'chunk.abc123.css'),
-        path.join(result.directory, 'chunk.abc123.css'),
-      );
-      fs.symlinkSync(externalDir, path.join(result.directory, 'linked-assets'));
-      fs.symlinkSync('../assets/app.js', path.join(result.directory, 'assets', 'app-link.js'));
+    mockGemBuild();
+    runPostBuild(result);
 
-      return result;
+    const pub = path.join(tmpDir, 'dist-rails/public');
+
+    // Symlinked file dereferenced with correct content
+    assert.ok(!fs.lstatSync(path.join(pub, 'chunk.abc123.css')).isSymbolicLink());
+    assert.equal(fs.readFileSync(path.join(pub, 'chunk.abc123.css'), 'utf-8'), 'body{}');
+
+    // Symlinked directory dereferenced
+    assert.ok(fs.statSync(path.join(pub, 'linked-assets')).isDirectory());
+    assert.ok(!fs.lstatSync(path.join(pub, 'linked-assets')).isSymbolicLink());
+
+    // Relative symlink dereferenced with correct content
+    assert.ok(!fs.lstatSync(path.join(pub, 'assets/app-link.js')).isSymbolicLink());
+    assert.equal(fs.readFileSync(path.join(pub, 'assets/app-link.js'), 'utf-8'), 'console.log("app")');
+
+    // No symlinks anywhere in the tree
+    const allFiles = [];
+    const walk = (d) => {
+      for (const entry of fs.readdirSync(d, { withFileTypes: true })) {
+        const full = path.join(d, entry.name);
+        allFiles.push(full);
+        if (fs.statSync(full).isDirectory()) walk(full);
+      }
     };
-
-    const buildWithSymlinks = () => {
-      mockGemBuild();
-      runPostBuild(setupWithSymlinks());
-    };
-
-    const walkTree = (dir) => {
-      const entries = [];
-      const walk = (d) => {
-        for (const entry of fs.readdirSync(d, { withFileTypes: true })) {
-          const full = path.join(d, entry.name);
-          entries.push(full);
-          if (fs.statSync(full).isDirectory()) walk(full);
-        }
-      };
-      walk(dir);
-      return entries;
-    };
-
-    it('dereferences symlinked files in build output', () => {
-      buildWithSymlinks();
-
-      const cssPath = path.join(tmpDir, 'dist-rails/public/chunk.abc123.css');
-      assert.ok(fs.existsSync(cssPath));
-      assert.ok(!fs.lstatSync(cssPath).isSymbolicLink());
-      assert.equal(fs.readFileSync(cssPath, 'utf-8'), 'body{}');
-    });
-
-    it('dereferences symlinked directories in build output', () => {
-      buildWithSymlinks();
-
-      const dirPath = path.join(tmpDir, 'dist-rails/public/linked-assets');
-      assert.ok(fs.existsSync(dirPath));
-      assert.ok(!fs.lstatSync(dirPath).isSymbolicLink());
-      assert.ok(fs.statSync(dirPath).isDirectory());
-
-      const filePath = path.join(dirPath, 'chunk.abc123.css');
-      assert.ok(fs.existsSync(filePath));
-      assert.ok(!fs.lstatSync(filePath).isSymbolicLink());
-    });
-
-    it('dereferences relative symlinks in build output', () => {
-      buildWithSymlinks();
-
-      const linkPath = path.join(tmpDir, 'dist-rails/public/assets/app-link.js');
-      assert.ok(fs.existsSync(linkPath));
-      assert.ok(!fs.lstatSync(linkPath).isSymbolicLink());
-      assert.equal(fs.readFileSync(linkPath, 'utf-8'), 'console.log("app")');
-    });
-
-    it('dist-rails tree contains no symlinks', () => {
-      buildWithSymlinks();
-
-      const distRails = path.join(tmpDir, 'dist-rails');
-      const symlinks = walkTree(distRails).filter((e) => fs.lstatSync(e).isSymbolicLink());
-      assert.equal(
-        symlinks.length,
-        0,
-        `found symlinks: ${symlinks.map((s) => path.relative(distRails, s)).join(', ')}`,
-      );
-    });
+    walk(path.join(tmpDir, 'dist-rails'));
+    const symlinks = allFiles.filter((e) => fs.lstatSync(e).isSymbolicLink());
+    assert.equal(symlinks.length, 0, `unexpected symlinks: ${symlinks.join(', ')}`);
   });
 });
 
