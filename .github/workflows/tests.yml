@@ -11,8 +11,8 @@ jobs:
     name: Lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
       - run: npm install
@@ -26,8 +26,8 @@ jobs:
       matrix:
         node-version: [18, 20, 22]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node-version }}
       - run: npm install
@@ -41,14 +41,21 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Ember 6.8+ uses Vite, which is not yet supported by this addon.
-          # Only test against the last Broccoli/Webpack-based LTS.
           - ember-version: 'lts-6.4'
             ember-cli: '~6.4.0'
             node-version: 20
+            build-type: webpack
+          - ember-version: 'lts-6.8'
+            ember-cli: '~6.8.0'
+            node-version: 20
+            build-type: vite
+          - ember-version: 'latest'
+            ember-cli: 'latest'
+            node-version: 22
+            build-type: vite
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node-version }}
       - uses: ruby/setup-ruby@v1
@@ -57,10 +64,15 @@ jobs:
       - run: npm install
       - name: Generate Ember app and test addon integration
         run: |
-          npx ember-cli@${{ matrix.ember-cli }} new test-app --skip-git --skip-npm --no-welcome
+          npx ember-cli@${{ matrix.ember-cli }} new test-app --skip-git --skip-npm --no-welcome --no-ember-data
           cd test-app
           npm install
           npm install --save-dev ../
+          if [ "${{ matrix.build-type }}" = "vite" ]; then
+            node ../test/fixtures/inject-vite-plugin.mjs vite.config.mjs
+          else
+            cp ../test/fixtures/ember-cli-build.mjs ember-cli-build.mjs
+          fi
           npx ember build --environment=production
       - name: Verify gem was built
         run: ls test-app/dist-rails/*.gem
