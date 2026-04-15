@@ -36,6 +36,59 @@ You can then distribute this package [privately](https://gemfury.com) or
   gem 'ember-app-name'
 ```
 
+### Configuration
+
+Configure the addon in your Ember app's `ember-cli-build.js` via the `emberRails` options:
+
+| Option    | Default               | Description                                |
+|-----------|-----------------------|--------------------------------------------|
+| `enabled` | mode == "production"  | Enable gem generation                      |
+| `id`      | `"ember-{{ name }}"`  | Handlebars template for the gem name       |
+| `prepend` | `""`                  | Prefix for asset URLs (e.g. a CDN origin)  |
+
+### @embroider/webpack (recommended)
+
+For Embroider + Webpack builds, use the `embroiderBuild` wrapper
+exported from `ember-cli-rails`:
+
+```javascript
+// ember-cli-build.js
+const EmberApp = require("ember-cli/lib/broccoli/ember-app");
+const { embroiderBuild } = require("ember-cli-rails");
+
+module.exports = function (defaults) {
+  let app = new EmberApp(defaults, {
+    emberRails: {
+      prepend: "https://cdn.example.com",
+    },
+  });
+
+  return embroiderBuild(app, {
+    // Embroider options
+  });
+};
+```
+
+### Classic pipeline (pre-Embroider)
+
+If you are not using Embroider, no build wrapper is needed — the addon
+hooks into the standard Ember CLI pipeline automatically:
+
+```javascript
+// ember-cli-build.js
+const EmberApp = require("ember-cli/lib/broccoli/ember-app");
+
+module.exports = function (defaults) {
+  let app = new EmberApp(defaults, {
+    emberRails: {
+      prepend: "https://cdn.example.com",
+    },
+  });
+
+  return app.toTree();
+};
+```
+
 ### Rendering the Ember app
 
 The generated gem adds a `render_<app_name>` helper to your Rails controllers:

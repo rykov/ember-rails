@@ -2,6 +2,22 @@
 
 All notable changes to this project are documented in this file.
 
+## 2.0.1
+
+### Bug Fixes
+
+- Fixed `rootURL` resolution for Ember 6.12+ builds
+- Fixed Ruby middleware to use `start_with?`
+
+### Improvements
+
+- Modernized JavaScript to ES2015+
+- Made `postBuild` hook asynchronous
+- Upgraded ESLint to v10 with flat config
+- Fixed `@embroider` peer dependencies
+
+---
+
 ## 2.0.0
 
 ### Breaking Changes from 1.x
