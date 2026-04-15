@@ -38,7 +38,7 @@ You can then distribute this package [privately](https://gemfury.com) or
 
 ### Configuration
 
-Configure the addon in your Ember app's `ember-cli-build.js` via the `emberRails` options:
+Configure the addon in your Ember app as follows:
 
 | Option    | Default               | Description                                |
 |-----------|-----------------------|--------------------------------------------|
@@ -46,7 +46,31 @@ Configure the addon in your Ember app's `ember-cli-build.js` via the `emberRails
 | `id`      | `"ember-{{ name }}"`  | Handlebars template for the gem name       |
 | `prepend` | `""`                  | Prefix for asset URLs (e.g. a CDN origin)  |
 
-### @embroider/webpack (recommended)
+### Vite (recommended)
+
+For Embroider + Vite builds, use the Vite plugin in your `vite.config.mjs` with your config:
+
+```javascript
+// vite.config.mjs
+import { defineConfig } from "vite";
+import { extensions, classicEmberSupport, ember } from '@embroider/vite';
+import railsPlugin from "ember-cli-rails/vite-plugin";
+import { babel } from '@rollup/plugin-babel';
+
+export default defineConfig({
+  plugins: [
+    /* snip: Ember & Babel plugins */
+    railsPlugin({
+      prepend: "https://cdn.example.com",
+    }),
+  ],
+});
+```
+
+The plugin automatically sets Vite's `base` to match the Rails engine
+asset path — do not set `base` manually.
+
+### @embroider/webpack
 
 For Embroider + Webpack builds, use the `embroiderBuild` wrapper
 exported from `ember-cli-rails`:

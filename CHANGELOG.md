@@ -2,6 +2,26 @@
 
 All notable changes to this project are documented in this file.
 
+## 3.0.0
+
+### Breaking Changes
+
+- **Upgraded to v2 addon format** (`ember-addon.version: 2`)
+- **Removed** Broccoli-based gem packaging (`rails-assets.js`, `postprocessTree`)
+- **Removed** `broccoli-merge-trees`, `broccoli-plugin`, `ember-cli-babel` dependencies
+
+### New Features
+
+- Added Vite plugin for gem packaging (`ember-cli-rails/vite-plugin`)
+- Classic pipeline auto-disabled when Vite plugin is active
+
+### Improvements
+
+- Consolidated gem scaffold and build logic into `lib/helpers.js`
+- Embroider peer dependencies resolved from consuming app's context
+
+---
+
 ## 2.0.1
 
 ### Bug Fixes
