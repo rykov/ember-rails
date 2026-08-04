@@ -89,9 +89,29 @@ module.exports = function (defaults) {
 
   return embroiderBuild(app, {
     // Embroider options
+    stripSourcemaps: EmberApp.env() === "production",
   });
 };
 ```
+
+In addition to Embroider's own options, `embroiderBuild` accepts:
+
+| Option            | Default | Description                                        |
+|-------------------|---------|----------------------------------------------------|
+| `stripSourcemaps` | `false` | Sourcemap handling for the build output (and thus the packaged gem); see values below |
+
+Supported `stripSourcemaps` values:
+
+- `false` (default) — leave the build output untouched.
+- `true` — remove `*.map` files and trailing `sourceMappingURL` comments.
+- `"hidden"` — strip only the `sourceMappingURL` comments, keeping the
+  `*.map` files in the output (like Webpack's `hidden-source-map` or
+  Vite's `sourcemap: "hidden"`). Useful when CI uploads the maps to an
+  error tracker (Sentry, Honeybadger, etc.) after the build; note the
+  unreferenced maps still ship in the gem.
+
+`stripSourcemaps` only applies to `embroiderBuild`. For Vite builds,
+use Vite's own `build.sourcemap` option instead (off by default).
 
 ### Classic pipeline (pre-Embroider)
 

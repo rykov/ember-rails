@@ -2,6 +2,17 @@
 
 All notable changes to this project are documented in this file.
 
+## 3.1.0
+
+### New Features
+
+- Added `stripSourcemaps` option to `embroiderBuild` — `true` removes `*.map`
+  files and trailing `sourceMappingURL` comments from the build output (and
+  the packaged gem); `"hidden"` keeps the maps but strips the comments
+- Re-introduced `broccoli-plugin` dependency for the strip plugin
+
+---
+
 ## 3.0.0
 
 ### Breaking Changes

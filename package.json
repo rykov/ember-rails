@@ -1,6 +1,6 @@
 {
   "name": "ember-cli-rails",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "license": "MIT",
   "description": "Package Ember app for Rails Asset Pipeline",
   "homepage": "https://github.com/rykov/ember-cli-rails#readme",
@@ -47,6 +47,7 @@
   },
   "dependencies": {
     "broccoli-kitchen-sink-helpers": "^0.3.1",
+    "broccoli-plugin": "^4.0.7",
     "fs-extra": "^11.3.4",
     "silent-error": "^1.1.1",
     "handlebars": "^4.7.7",

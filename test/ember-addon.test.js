@@ -6,6 +6,7 @@ const os = require('node:os');
 const childProc = require('child_process');
 
 const addon = require('../lib/ember-addon');
+const StripSourcemaps = require('../lib/strip-sourcemaps');
 const pkg = require('../package.json');
 
 // --- v2 addon contract ---
@@ -435,5 +436,77 @@ describe('embroider builds', () => {
         assert.equal(receivedBuilder.name, 'FakeWebpack');
       },
     );
+  });
+
+  // Mock trees below have read() so broccoli-plugin accepts them as input nodes
+  const makeMockTree = (props = {}) => ({ read() {}, ...props });
+
+  it('deletes wrapper-only options before calling compatBuild', () => {
+    let capturedOpts;
+    withEmbroiderMocks(
+      (_app, _builder, opts) => { capturedOpts = opts; return makeMockTree(); },
+      () => {
+        addon.embroiderBuild(makeApp([makeMockSelf()]), {
+          stripSourcemaps: true,
+          postprocessAppTree: (tree) => tree,
+          staticInvokables: true,
+        });
+        assert.ok(!('stripSourcemaps' in capturedOpts));
+        assert.ok(!('postprocessAppTree' in capturedOpts));
+        assert.equal(capturedOpts.staticInvokables, true);
+      },
+    );
+  });
+
+  it('does not wrap the tree when stripSourcemaps is falsy', () => {
+    const mockTree = makeMockTree({ fakeTree: true });
+    withEmbroiderMocks(() => mockTree, () => {
+      const result = addon.embroiderBuild(makeApp([makeMockSelf()]), {
+        stripSourcemaps: false,
+      });
+      assert.equal(result, mockTree);
+    });
+  });
+
+  it('wraps the tree in StripSourcemaps when stripSourcemaps is true', () => {
+    const mockTree = makeMockTree();
+    withEmbroiderMocks(() => mockTree, () => {
+      const result = addon.embroiderBuild(makeApp([makeMockSelf()]), {
+        stripSourcemaps: true,
+      });
+      assert.ok(result instanceof StripSourcemaps);
+      assert.equal(result.keepMaps, false);
+    });
+  });
+
+  it('keeps maps but strips comments when stripSourcemaps is "hidden"', () => {
+    withEmbroiderMocks(() => makeMockTree(), () => {
+      const result = addon.embroiderBuild(makeApp([makeMockSelf()]), {
+        stripSourcemaps: 'hidden',
+      });
+      assert.ok(result instanceof StripSourcemaps);
+      assert.equal(result.keepMaps, true);
+    });
+  });
+
+  it('rejects unknown string values of stripSourcemaps', () => {
+    assert.throws(
+      () => addon.embroiderBuild(makeApp([makeMockSelf()]), { stripSourcemaps: 'Hidden' }),
+      { message: 'Invalid stripSourcemaps value "Hidden"; expected true, false, or "hidden".' },
+    );
+  });
+
+  it('strips after postprocessAppTree so the wrapped tree is the postprocessed one', () => {
+    const postprocessed = makeMockTree({ processed: true });
+    let receivedByHook;
+    withEmbroiderMocks(() => makeMockTree({ original: true }), () => {
+      const result = addon.embroiderBuild(makeApp([makeMockSelf()]), {
+        stripSourcemaps: true,
+        postprocessAppTree(tree) { receivedByHook = tree; return postprocessed; },
+      });
+      assert.equal(receivedByHook.original, true);
+      assert.ok(result instanceof StripSourcemaps);
+      assert.equal(result._inputNodes[0], postprocessed);
+    });
   });
 });
